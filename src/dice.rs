@@ -54,27 +54,26 @@ pub fn roll_dice(
     }
 
     let mut rolls = Vec::new();
+    let mut rng = rand::thread_rng();
 
-    if advantage || disadvantage {
-        let mut rng = rand::thread_rng();
-        let roll1 = rng.gen_range(1..=sides);
-        let roll2 = rng.gen_range(1..=sides);
+    for _ in 0..count {
+        if advantage || disadvantage {
+            let roll1 = rng.gen_range(1..=sides);
+            let roll2 = rng.gen_range(1..=sides);
 
-        let formatted_roll1 = format_roll(roll1, sides);
-        let formatted_roll2 = format_roll(roll2, sides);
+            let formatted_roll1 = format_roll(roll1, sides);
+            let formatted_roll2 = format_roll(roll2, sides);
 
-        let roll1_is_winner = if advantage { roll1 >= roll2 } else { roll1 <= roll2 };
+            let roll1_is_winner = if advantage { roll1 >= roll2 } else { roll1 <= roll2 };
 
-        let result_str = if roll1_is_winner {
-            format!("{} \x1B[9m{}\x1B[0m", formatted_roll1, formatted_roll2)
+            let result_str = if roll1_is_winner {
+                format!("({} \x1B[9m{}\x1B[0m)", formatted_roll1, formatted_roll2)
+            } else {
+                format!("(\x1B[9m{}\x1B[0m {})", formatted_roll1, formatted_roll2)
+            };
+            rolls.push(result_str);
         } else {
-            format!("\x1B[9m{}\x1B[0m {}", formatted_roll1, formatted_roll2)
-        };
-        rolls.push(result_str);
-
-    } else {
-        for _ in 0..count {
-            let roll = rand::thread_rng().gen_range(1..=sides);
+            let roll = rng.gen_range(1..=sides);
             rolls.push(format_roll(roll, sides));
         }
     }
@@ -147,12 +146,25 @@ mod tests {
     #[test]
     fn test_roll_dice_advantage() {
         let result = roll_dice(20, 1, true, false).unwrap();
+        assert!(result.starts_with('(') && result.ends_with(')'));
         assert!(result.contains("\x1B[9m"));
     }
 
     #[test]
     fn test_roll_dice_disadvantage() {
         let result = roll_dice(20, 1, false, true).unwrap();
+        assert!(result.starts_with('(') && result.ends_with(')'));
         assert!(result.contains("\x1B[9m"));
+    }
+
+    #[test]
+    fn test_roll_dice_multiple_advantage() {
+        let result = roll_dice(20, 2, true, false).unwrap();
+        let rolls: Vec<&str> = result.split(", ").collect();
+        assert_eq!(rolls.len(), 2);
+        for roll in rolls {
+            assert!(roll.starts_with('(') && roll.ends_with(')'));
+            assert!(roll.contains("\x1B[9m"));
+        }
     }
 }
